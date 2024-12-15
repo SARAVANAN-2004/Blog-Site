@@ -17,7 +17,7 @@ This is a simple blog website built using **Node.js**, **Express.js**, and **EJS
 ## Technologies Used  
 - **Backend**: Node.js, Express.js  
 - **Frontend**: EJS, CSS  
-- **Database**: [Add your database here, e.g., MongoDB, SQLite, etc.]  
+- **Database**: Firebase
 - **Version Control**: Git  
 
 ---
