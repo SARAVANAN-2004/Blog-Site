@@ -1,0 +1,33 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Create a New Post</title>
+    <link rel="stylesheet" href="/styles/new-post.css">
+</head>
+<body>
+    <div class="container">
+        <div class="banner">
+            <input type="file" accept="image/*" id="banner-upload" hidden>
+            <label for="banner-upload" class="banner-upload-btn">Upload Banner</label>
+        </div>
+
+        <div class="blog">
+            <textarea class="title input-field" placeholder="Enter your blog title here..."></textarea>
+            <textarea class="article input-field" placeholder="Start writing your blog..."></textarea>
+        </div>
+
+        <div class="blog-options">
+            <button class="btn submit-btn publish-btn">Publish</button>
+
+        </div>
+    </div>
+
+    <script src="https://www.gstatic.com/firebasejs/8.9.1/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.9.1/firebase-firestore.js"></script>
+    <script src="js/firebase.js"></script>
+    <script src="/js/new-post.js"></script>
+</body>
+</html>

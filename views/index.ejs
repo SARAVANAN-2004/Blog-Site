@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Blog: Home</title>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="/styles/home.css">
+</head>
+<body>
+    <nav class="navbar">
+        <div class="navbar-inner">
+            <img src="/img/logo.jpeg" class="logo" alt="Logo">
+            <ul class="links-container">
+                <li class="link-item"><a href="/" class="link">Home</a></li>
+                <li class="link-item"><a href="/new" class="link">Editor</a></li>
+            </ul>
+            <label class="switch">
+                <span class="theme-emoji" id="light-emoji">☀️</span>
+                <input type="checkbox" id="theme-switch">
+                <span class="slider"></span>
+                <span class="theme-emoji" id="dark-emoji">🌙</span>
+            </label>
+        </div>
+    </nav>
+
+    <header class="header">
+        <div class="content">
+            <h1 class="heading">
+                <span class="small">Welcome to the world of</span>
+                Blog <span class="no-fill">Writing</span>
+            </h1>
+            <a href="/new" class="btn">Write a Blog</a>
+        </div>
+    </header>
+
+    <section class="blogs-section">
+        <% blogs.forEach(blog => { %>
+            <div class="blog-card">
+                <% if (blog.bannerImage) { %>
+                    <img src="<%= blog.bannerImage %>" class="blog-header-image" alt="Header Image">
+                <% } %>
+                <h2 class="blog-title"><%= blog.title %></h2>
+                <p class="blog-overview">
+                    <%= blog.content ? blog.content.substring(0, 200) + '...' : 'No content available.' %>
+                </p>
+                <a href="/<%= blog.id %>" class="btn read-btn">Read</a>
+            </div>
+        <% }) %>
+    </section>
+
+    <script src="/js/home.js"></script>
+</body>
+</html>
