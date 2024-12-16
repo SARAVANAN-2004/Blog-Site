@@ -16,7 +16,12 @@ import {
 import fileUpload from 'express-fileupload';
 
 const firebaseConfig = {
-   //firebase api key
+    apiKey: "AIzaSyDfwO7zz5pdCa0zlThbGbhtLIO3eey76No",
+    authDomain: "blogging-website-bf766.firebaseapp.com",
+    projectId: "blogging-website-bf766",
+    storageBucket: "blogging-website-bf766.appspot.com",
+    messagingSenderId: "364944894513",
+    appId: "1:364944894513:web:4b519aa21f9ca7aedcc310"
 };
 
 
@@ -48,11 +53,7 @@ app.post('/upload', (req, res) => {
     let path = 'public/uploads/' + imagename;
 
     file.mv(path, (err) => {
-        if (err) {
-            throw err;
-        } else {
-            res.json(`uploads/${imagename}`);
-        }
+         res.json(`uploads/${imagename}`);
     });
 });
 
@@ -63,86 +64,49 @@ app.get("/new", (req, res) => {
 app.post("/new", async (req, res) => {
     const { title, content } = req.body;
     const blogsCollection = collection(db, "blogs");
-
-    try {
-        const docRef = await addDoc(blogsCollection, { 
-            title, 
-            content, 
-            publishedAt: new Date().toLocaleString() 
-        });
-        res.redirect(`/${docRef.id}`);
-    } catch (error) {
-        console.error("Error adding document:", error);
-        res.status(500).send("Error creating blog.");
-    }
+    const docRef = await addDoc(blogsCollection, { 
+        title, 
+        content, 
+        publishedAt: new Date().toLocaleString() 
+    });
+    res.redirect(`/${docRef.id}`);
+    
 });
 
 app.get('/:id', async (req, res) => {
     const blogId = req.params.id;
-
-    try {
-        const blogDoc = await getDoc(doc(db, 'blogs', blogId));
-        if (!blogDoc.exists()) {
-            return res.status(404).send('Blog not found');
-        }
-
-        const blog = blogDoc.data();
-        blog.content = blog.content || '';
-
-        res.render('blog', { blog: { ...blog, id: blogDoc.id } });
-    } catch (error) {
-        console.error('Error fetching blog:', error);
-        res.status(500).send('An error occurred while fetching the blog');
-    }
+    const blogDoc = await getDoc(doc(db, 'blogs', blogId));
+    const blog = blogDoc.data();
+    res.render('blog', { blog: { ...blog, id: blogDoc.id } });
+   
 });
 
 app.get("/edit/:id", async (req, res) => {
     const { id } = req.params;
-
-    try {
-        const blogDoc = await getDoc(doc(db, "blogs", id));
-        if (!blogDoc.exists) {
-            return res.status(404).send("Blog not found");
-        }
-
-        const blog = { id: blogDoc.id, ...blogDoc.data() };
-        res.render("edit", { blog });
-    } catch (error) {
-        console.error("Error fetching blog for edit:", error);
-        res.status(500).send("Internal Server Error");
-    }
+    const blogDoc = await getDoc(doc(db, "blogs", id));
+    const blog = { id: blogDoc.id, ...blogDoc.data() };
+    res.render("edit", { blog });
+    
 });
 
 app.post("/edit/:id", async (req, res) => {
     const { id } = req.params;
     const { title, content } = req.body;
-
-    try {
-        const blogRef = doc(db, "blogs", id);
-        await updateDoc(blogRef, { 
-            title, 
-            content, 
-            updatedAt: new Date().toLocaleString() 
-        });
-        res.redirect(`/${id}`);
-    } catch (error) {
-        console.error("Error updating blog:", error);
-        res.status(500).send("Error updating blog.");
-    }
+    const blogRef = doc(db, "blogs", id);
+    await updateDoc(blogRef, { 
+        title, 
+        content, 
+        updatedAt: new Date().toLocaleString() 
+    });
+    res.redirect(`/${id}`);
+    
 });
 
 app.post('/delete/:id', async (req, res) => {
     const id = req.params.id;
-
-    try {
-        const blogDoc = doc(db, 'blogs', id);
-        await deleteDoc(blogDoc);
-        console.log(`Blog with ID ${id} deleted successfully.`);
-        res.redirect('/');
-    } catch (error) {
-        console.error('Error deleting blog:', error);
-        res.status(500).send('An error occurred while deleting the blog.');
-    }
+    const blogDoc = doc(db, 'blogs', id);
+    await deleteDoc(blogDoc);
+    res.redirect('/');
 });
 
 app.listen(port, () => {
