@@ -4,6 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Blog: Home</title>
+    <link rel="shortcut icon" href="/img/logo.jpeg" type="image/x-icon">
     <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="/styles/home.css">
 </head>
@@ -49,6 +50,27 @@
         <% }) %>
     </section>
 
-    <script src="/js/home.js"></script>
+
+    <script>
+        const toggleSwitch = document.querySelector('#theme-switch');
+        const lightEmoji = document.querySelector('#light-emoji');
+        const darkEmoji = document.querySelector('#dark-emoji');
+
+        const updateTheme = () => {
+        if (toggleSwitch.checked) {
+            document.body.classList.add('dark-mode');
+            lightEmoji.style.opacity = 0.3;
+            darkEmoji.style.opacity = 1;
+        } else {
+            document.body.classList.remove('dark-mode');
+            lightEmoji.style.opacity = 1;
+            darkEmoji.style.opacity = 0.3;
+        }
+        };
+
+        toggleSwitch.addEventListener('change', updateTheme);
+        updateTheme();
+    </script>
+    
 </body>
 </html>
