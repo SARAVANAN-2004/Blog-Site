@@ -1,109 +1,128 @@
 import express from "express";
-import bodyParser from "body-parser";
 import { dirname } from "path";
 import { fileURLToPath } from "url";
-import { initializeApp } from "firebase/app";
-import { 
-    getFirestore, 
-    collection, 
-    addDoc, 
-    getDoc, 
-    doc, 
-    getDocs, 
-    updateDoc, 
-    deleteDoc 
-} from "firebase/firestore";
-import fileUpload from 'express-fileupload';
+import fileUpload from "express-fileupload";
+import pg from "pg";
+import fs from "fs";
+import dotenv from 'dotenv';
 
-const firebaseConfig = {
-    //firebase api
-};
-
-
-const firebaseApp = initializeApp(firebaseConfig);
-const db = getFirestore(firebaseApp);
-
+dotenv.config();
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const app = express();
 const port = 3000;
 
+// Ensure uploads folder exists
+const uploadDir = "public/uploads";
+if (!fs.existsSync(uploadDir)) {
+  fs.mkdirSync(uploadDir, { recursive: true });
+}
+
+// PostgreSQL connection
+
+const pool = new pg.Client({
+  user: process.env.DB_USER,
+  host: process.env.DB_HOST,
+  database: process.env.DB_NAME,
+  password: process.env.DB_PASSWORD,
+  port: process.env.DB_PORT,
+  ssl: {
+    rejectUnauthorized: false,
+  },
+});
+await pool.connect();
+console.log("PostgreSQL connected successfully");
+
+// Middleware
 app.use(fileUpload());
-app.set("view engine", "ejs");
+app.use(express.json());
+app.use(express.urlencoded({ extended: true }));
 app.use(express.static("public"));
-app.use(bodyParser.urlencoded({ extended: true }));
+app.set("view engine", "ejs");
+app.use("/favicon.ico", express.static("public/img/logo.jpeg"));
 
-
+// Home page
 app.get("/", async (req, res) => {
-    const blogsCollection = collection(db, "blogs");
-    const snapshot = await getDocs(blogsCollection);
-    const blogs = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-    res.render("index", { blogs });
+  const blogs = await pool.query("SELECT * FROM posts ORDER BY publishedat DESC");
+  res.render("index", { blogs: blogs.rows });
 });
 
+// Image upload
+app.post("/upload", (req, res) => {
+  const file = req.files.image;
+  const filename = Date.now() + file.name;
+  const path = `public/uploads/${filename}`;
 
-app.post('/upload', (req, res) => {
-    let file = req.files.image;
-    let date = new Date();
-    let imagename = date.getDate() + date.getTime() + file.name;
-    let path = 'public/uploads/' + imagename;
-
-    file.mv(path, (err) => {
-         res.json(`uploads/${imagename}`);
-    });
+  file.mv(path, () => {
+    res.json(`uploads/${filename}`);
+  });
 });
 
-app.get("/new", (req, res) => {
-    res.render("new");
-});
+// New blog form
+app.get("/new", (req, res) => res.render("new"));
 
+// Create blog
 app.post("/new", async (req, res) => {
-    const { title, content } = req.body;
-    const blogsCollection = collection(db, "blogs");
-    const docRef = await addDoc(blogsCollection, { 
-        title, 
-        content, 
-        publishedAt: new Date().toLocaleString() 
-    });
-    res.redirect(`/${docRef.id}`);
-    
+  const { title, content } = req.body;
+  const publishedAt = new Date();
+  let bannerPath = "uploads/default-banner.jpg";
+
+  if (req.files?.bannerImage) {
+    const file = req.files.bannerImage;
+    const name = Date.now() + file.name;
+    await file.mv(`public/uploads/${name}`);
+    bannerPath = `uploads/${name}`;
+  }
+
+  const result = await pool.query(
+    `INSERT INTO posts (title, content, bannerimage, publishedat)
+     VALUES ($1, $2, $3, $4) RETURNING id`,
+    [title, content, bannerPath, publishedAt]
+  );
+
+  res.redirect(`/${result.rows[0].id}`);
 });
 
-app.get('/:id', async (req, res) => {
-    const blogId = req.params.id;
-    const blogDoc = await getDoc(doc(db, 'blogs', blogId));
-    const blog = blogDoc.data();
-    res.render('blog', { blog: { ...blog, id: blogDoc.id } });
-   
+
+// View blog
+app.get("/:id", async (req, res) => {
+  const result = await pool.query("SELECT * FROM posts WHERE id = $1", [req.params.id]);
+  res.render("blog", { blog: result.rows[0] });
 });
 
+// Edit blog form
 app.get("/edit/:id", async (req, res) => {
-    const { id } = req.params;
-    const blogDoc = await getDoc(doc(db, "blogs", id));
-    const blog = { id: blogDoc.id, ...blogDoc.data() };
-    res.render("edit", { blog });
-    
+  const result = await pool.query("SELECT * FROM posts WHERE id = $1", [req.params.id]);
+  res.render("edit", { blog: result.rows[0] });
 });
 
+// Update blog
 app.post("/edit/:id", async (req, res) => {
-    const { id } = req.params;
-    const { title, content } = req.body;
-    const blogRef = doc(db, "blogs", id);
-    await updateDoc(blogRef, { 
-        title, 
-        content, 
-        updatedAt: new Date().toLocaleString() 
-    });
-    res.redirect(`/${id}`);
-    
+  const { title, content } = req.body;
+  const updatedAt = new Date();
+  let query, values;
+
+  if (req.files?.bannerImage) {
+    const file = req.files.bannerImage;
+    const name = Date.now() + file.name;
+    await file.mv(`public/uploads/${name}`);
+    query = `UPDATE posts SET title=$1, content=$2, bannerimage=$3, updated_at=$4 WHERE id=$5`;
+    values = [title, content, `uploads/${name}`, updatedAt, req.params.id];
+  } else {
+    query = `UPDATE posts SET title=$1, content=$2, updated_at=$3 WHERE id=$4`;
+    values = [title, content, updatedAt, req.params.id];
+  }
+
+  await pool.query(query, values);
+  res.redirect(`/${req.params.id}`);
 });
 
-app.post('/delete/:id', async (req, res) => {
-    const id = req.params.id;
-    const blogDoc = doc(db, 'blogs', id);
-    await deleteDoc(blogDoc);
-    res.redirect('/');
+// Delete blog
+app.post("/delete/:id", async (req, res) => {
+  await pool.query("DELETE FROM posts WHERE id = $1", [req.params.id]);
+  res.redirect("/");
 });
 
+// Start server
 app.listen(port, () => {
-    console.log(`Server is running on http://localhost:${port}`);
+  console.log(`Server running at http://localhost:${port}`);
 });

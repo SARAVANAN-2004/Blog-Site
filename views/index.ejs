@@ -39,7 +39,7 @@
         <% blogs.forEach(blog => { %>
             <div class="blog-card">
                 <% if (blog.bannerImage) { %>
-                    <img src="<%= blog.bannerImage %>" class="blog-header-image" alt="Header Image">
+                    <img src="<%= blog.bannerImage || '' %>" class="blog-header-image" alt="Header Image">
                 <% } %>
                 <h2 class="blog-title"><%= blog.title %></h2>
                 <p class="blog-overview">

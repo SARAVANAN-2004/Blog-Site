@@ -1,114 +1,91 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta http-equiv="X-UA-Compatible" content="IE=edge">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Create a New Post</title>
-    <link rel="stylesheet" href="/styles/new-post.css">
+  <meta charset="UTF-8" />
+  <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Create a New Post</title>
+  <link rel="stylesheet" href="/styles/new-post.css" />
 </head>
 <body>
-    <div class="container">
-        <div class="banner">
-            <input type="file" accept="image/*" id="banner-upload" hidden>
-            <label for="banner-upload" class="banner-upload-btn">Upload Banner</label>
-        </div>
-
-        <div class="blog">
-            <textarea class="title input-field" placeholder="Enter your blog title here..."></textarea>
-            <textarea class="article input-field" placeholder="Start writing your blog..."></textarea>
-        </div>
-
-        <div class="blog-options">
-            <button class="btn submit-btn publish-btn">Publish</button>
-
-        </div>
+  <div class="container">
+    <div class="banner">
+      <input type="file" accept="image/*" id="banner-upload" hidden />
+      <label for="banner-upload" class="banner-upload-btn">Upload Banner</label>
     </div>
 
-    <script src="https://www.gstatic.com/firebasejs/8.9.1/firebase-app.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/8.9.1/firebase-firestore.js"></script>
+    <div class="blog">
+      <textarea class="title input-field" placeholder="Enter your blog title here..."></textarea>
+      <textarea class="article input-field" placeholder="Start writing your blog..."></textarea>
+    </div>
 
-    <script>
-        const blogTitleField = document.querySelector('.title');
-        const articleFeild = document.querySelector('.article');
-        const bannerImage = document.querySelector('#banner-upload');
-        const banner = document.querySelector(".banner");
-        let bannerPath;
+    <div class="blog-options">
+      <button class="btn submit-btn publish-btn">Publish</button>
+    </div>
+  </div>
 
-        const publishBtn = document.querySelector('.publish-btn');
-        const uploadInput = document.querySelector('#image-upload');
+  <script>
+    const blogTitleField = document.querySelector(".title");
+    const articleField = document.querySelector(".article");
+    const bannerImage = document.querySelector("#banner-upload");
+    const banner = document.querySelector(".banner");
+    let bannerPath = "uploads/default-banner.jpg"; // fallback
 
-        const firebaseConfig = {
-            //firebase api
+    bannerImage.addEventListener("change", () => {
+      uploadImage(bannerImage);
+    });
+
+    const uploadImage = (uploadFile) => {
+      const [file] = uploadFile.files;
+      if (file && file.type.includes("image")) {
+        const formdata = new FormData();
+        formdata.append("image", file);
+
+        fetch("/upload", {
+          method: "POST",
+          body: formdata
+        })
+        .then(res => res.json())
+        .then(data => {
+          bannerPath = `${location.origin}/${data}`;
+          banner.style.backgroundImage = `url("${bannerPath}")`;
+        });
+      } else {
+        alert("Upload image only");
+      }
+    };
+
+    document.querySelector(".publish-btn").addEventListener("click", async () => {
+      if (blogTitleField.value.length && articleField.value.length) {
+        const blogData = {
+          title: blogTitleField.value,
+          content: articleField.value,
+          bannerImage: bannerPath
         };
 
+        try {
+          const response = await fetch("/new", {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json"
+            },
+            body: JSON.stringify(blogData)
+          });
 
-        firebase.initializeApp(firebaseConfig);
-
-        const db = firebase.firestore();
-
-        bannerImage.addEventListener('change', () => {
-            uploadImage(bannerImage, "banner");
-        })
-
-
-        const uploadImage = (uploadFile, uploadType) => {
-            const [file] = uploadFile.files;
-            if(file && file.type.includes("image")){
-                const formdata = new FormData();
-                formdata.append('image', file);
-
-                fetch('/upload', {
-                    method: 'post',
-                    body: formdata
-                }).then(res => res.json())
-                .then(data => {
-                    if(uploadType == "image"){
-                        addImage(data, file.name);
-                    } else{
-                        bannerPath = `${location.origin}/${data}`;
-                        banner.style.backgroundImage = `url("${bannerPath}")`;
-                    }
-                })
-            } else{
-                alert("upload Image only");
-            }
+          if (response.redirected) {
+            window.location.href = response.url; // redirect to blog page
+          } else {
+            const result = await response.json();
+            alert("Failed to publish: " + result.message);
+          }
+        } catch (err) {
+          console.error("Error:", err);
+          alert("Something went wrong!");
         }
-
-        const addImage = (imagepath, alt) => {
-            let curPos = articleFeild.selectionStart;
-            let textToInsert = `\r![${alt}](${imagepath})\r`;
-            articleFeild.value = articleFeild.value.slice(0, curPos) + textToInsert + articleFeild.value.slice(curPos);
-        }
-
-        let months = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
-
-        publishBtn.addEventListener('click', () => {
-            if (articleFeild.value.length && blogTitleField.value.length) {
-                let letters = 'abcdefghijklmnopqrstuvwxyz';
-                let blogTitle = blogTitleField.value.split(" ").join("-");
-                let id = '';
-                for (let i = 0; i < 4; i++) {
-                    id += letters[Math.floor(Math.random() * letters.length)];
-                }
-
-                let docName = `${blogTitle}-${id}`;
-                let date = new Date();
-
-                db.collection("blogs")
-                .doc(docName)
-                .set({
-                    title: blogTitleField.value,
-                    content: articleFeild.value,
-                    bannerImage: bannerPath,
-                    publishedAt: `${date.getDate()} ${months[date.getMonth()]} ${date.getFullYear()}`
-                })
-                .then(() => {
-                    location.href = `/${docName}`;
-                });
-            }
-        });
-    </script>
-    
+      } else {
+        alert("Title and content cannot be empty!");
+      }
+    });
+  </script>
 </body>
 </html>
